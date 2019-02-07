@@ -41,7 +41,7 @@ apt_requirements = [
     'python3-dev',
     'build-essential',
     'apache2',
-    'libapache2-mod-wsqi-py3',
+    'libapache2-mod-wsgi-py3',
     'python3-setuptools',
     'libssl-dev',
     'libffi-dev'
@@ -65,7 +65,7 @@ def _install_apt_packages(requires):
     reqs = ''
     for req in requires:
         reqs += ' ' + req
-        sudo('apt-get -y install '+ reqs)
+    sudo('apt-get -y install '+ reqs)
 
 def _making_virtualenv():
     if not exists('~/.virtualenvs'):
