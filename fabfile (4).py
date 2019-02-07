@@ -3,19 +3,8 @@ from fabric.api import local, run, sudo, env
 import os
 import json
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-envs = json.load(open( os.path.join(PROJECT_DIR, 'deploy.json') ))
-
-'''
-{
-'REPO_URL': 'https://github.com/eunsongsong/first', 
-'PROJECT_NAME': 'first', 
-'REMOTE_HOST': 'ec2-52-79-239-108.ap-northeast-2.compute.amazonaws.com', 
-'REMOTE_HOST_SSH': '52.79.239.108', 
-'REMOTE_USER': 'ubuntu'
-}
-'''
+PROJECT_DIR = os.path.dirname( os.path.abspath(__file__) )
+envs = json.load( open( os.path.join(PROJECT_DIR,'deploy.json') ) )
 
 REPO_URL        = envs['REPO_URL']
 PROJECT_NAME    = envs['PROJECT_NAME']
@@ -23,16 +12,14 @@ REMOTE_HOST     = envs['REMOTE_HOST']
 REMOTE_HOST_SSH = envs['REMOTE_HOST_SSH']
 REMOTE_USER     = envs['REMOTE_USER']
 
-env.user = REMOTE_USER
+env.user  = REMOTE_USER
 env.hosts = [
-    REMOTE_HOST_SSH, 
-    ]
-
+    REMOTE_HOST_SSH,
+]
 env.use_ssh_config = True
-env.key_filename = 'song.pem'
+env.key_filename   = 'song.pem'
 
-project_folder = '/home/{}/{}'.format(env.user, PROJECT_NAME)
-print(project_folder)
+project_folder = '/home/{}/{}'.format(env.user,PROJECT_NAME)
 
 apt_requirements = [
     'curl',
@@ -41,13 +28,13 @@ apt_requirements = [
     'python3-dev',
     'build-essential',
     'apache2',
-    'libapache2-mod-wsqi-py3',
+    'libapache2-mod-wsgi-py3',
     'python3-setuptools',
     'libssl-dev',
     'libffi-dev'
 ]
 
-def new_initServer():
+def new_initSever():
     _setup()
     update()
 
@@ -58,27 +45,28 @@ def _setup():
 
 def _init_apt():
     yn = input('ubuntu linux update ok?: [y/n]')
-    if yn == 'y': 
+    if yn == 'y':
         sudo('apt-get update && apt-get -y upgrade')
 
-def _install_apt_packages(requires):
+def _install_apt_packages( requires ):    
     reqs = ''
-    for req in requires:
-        reqs += ' ' + req
-        sudo('apt-get -y install '+ reqs)
+    for req in requires:        
+        reqs += ' ' + req    
+    sudo( 'apt-get -y install ' + reqs )
 
-def _making_virtualenv():
+def _making_virtualenv():    
     if not exists('~/.virtualenvs'):
-        run('mkdir ~/.virtualenvs')
-        sudo('pip3 install virtualenv virtualenvwrapper')
+        run('mkdir ~/.virtualenvs')        
+        sudo('pip3 install virtualenv virtualenvwrapper')        
         cmd = '''
-            "#python virtualenv gloval setting
+            "# python virtualenv global setting
             export WORKON_HOME=~/.virtualenvs
+            # python location
             export VIRTUALENVWRAPPER_PYTHON="$(command \which python3)"
-            #shell 실행
+            # shell 실행
             source /usr/local/bin/virtualenvwrapper.sh"
         '''
-        run('echo {} >> ~/.bashrc'.format(cmd))
+        run('echo {} >> ~/.bashrc'.format(cmd) ) 
 
 def update():
     _git_update()
@@ -90,16 +78,17 @@ def update():
 def _git_update():
     if exists(project_folder + '/.git'):
         run('cd %s && git fetch' % (project_folder,))
-    else:
-        run('git clone %s %s' % (REPO_URL, project_folder))
+    else:        
+        run('git clone %s %s' % (REPO_URL, project_folder))    
     current_commit = local("git log -n 1 --format=%H", capture=True)
     run('cd %s && git reset --hard %s' % (project_folder, current_commit))
-
+    
 def _virtualenv_update():
     virtualenv_folder = project_folder + '/../.virtualenvs/{}'.format(PROJECT_NAME)
+    
     if not exists(virtualenv_folder + '/bin/pip'):
         run('cd /home/%s/.virtualenvs && virtualenv %s' % (env.user, PROJECT_NAME))
-    
+
     run('%s/bin/pip install -r %s/requirements.txt' % (
         virtualenv_folder, project_folder
     ))
@@ -111,19 +100,18 @@ def _ufw_allow():
 def _virtualhost_make():
     script = """'
     <VirtualHost *:80>
-    
-    ServerName {servername}
-    <Directory /home/{username}/{project_name}>
-        <Files wsgi.py>
-            Require all granted
-        </Files>
-    </Directory>
-    WSGIDaemonProcess {project_name} python-home=/home/{username}/.virtualenvs/{project_name} python-path=/home/{username}/{project_name}
-    WSGIProcessGroup {project_name}
-    WSGIScriptAlias / /home/{username}/{project_name}/wsgi.py
-    
-    ErrorLog ${{APACHE_LOG_DIR}}/error.log
-    CustomLog ${{APACHE_LOG_DIR}}/access.log combined
+        ServerName {servername}
+        <Directory /home/{username}/{project_name}>
+            <Files wsgi.py>
+                Require all granted
+            </Files>
+        </Directory>
+        WSGIDaemonProcess {project_name} python-home=/home/{username}/.virtualenvs/{project_name} python-path=/home/{username}/{project_name}
+        WSGIProcessGroup {project_name}
+        WSGIScriptAlias / /home/{username}/{project_name}/wsgi.py
+        
+        ErrorLog ${{APACHE_LOG_DIR}}/error.log
+        CustomLog ${{APACHE_LOG_DIR}}/access.log combined
     
     </VirtualHost>'""".format(
         username=REMOTE_USER,
@@ -139,4 +127,3 @@ def _grant_apache():
 
 def _restart_apache():
     sudo('service apache2 restart')
-    
