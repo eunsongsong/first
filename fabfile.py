@@ -29,7 +29,7 @@ env.hosts = [
     ]
 
 env.use_ssh_config = True
-env.key_filename = 'song.pem'
+env.key_filename = '../song.pem'
 
 project_folder = '/home/{}/{}'.format(env.user, PROJECT_NAME)
 print(project_folder)
